@@ -33,8 +33,8 @@ function buildConfig({
         entry: {
             // include dist in entry point so that when running dev server,
             // we can access the files with /dist/...
-            [`dist/transformers${name}`]: './src/transformers.js',
-            [`dist/transformers${name}.min`]: './src/transformers.js',
+            [`examples/video-object-detection/dist/transformers${name}`]: './src/transformers.js',
+            [`examples/video-object-detection/dist/transformers${name}.min`]: './src/transformers.js',
         },
         output: {
             filename: `[name]${suffix}`,
@@ -49,7 +49,7 @@ function buildConfig({
                 patterns: [
                     {
                         from: 'node_modules/onnxruntime-web/dist/*.wasm',
-                        to: 'dist/[name][ext]'
+                        to: 'examples/video-object-detection/dist/[name][ext]'
                     },
                 ],
             }),
@@ -71,7 +71,8 @@ function buildConfig({
             static: {
                 directory: __dirname
             },
-            port: 8080
+            host: '0.0.0.0',
+            port: 8082
         },
     };
 }

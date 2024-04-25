@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Transformers.js | Real-time object detection</title>
+  <link rel="stylesheet" href="./style.css" crossOrigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0-esmtest.20240411-1abb64e894/dist/ort.all.min.js"></script>
 </head>
 
 <body>
@@ -24,9 +26,15 @@
   <div id="controls">
     <div>
       <label>Image size</label>
-      (<label id="size-value">128</label>)
+      (<label id="size-value">0.5</label>)
       <br>
-      <input id="size" type="range" min="64" max="256" step="32" value="128" disabled>
+      <input id="size" type="range" min="0.1" max="1" step="10" value="0.5" disabled>
+    </div>
+    <div>
+      <label>Image Scale</label>
+      (<label id="scale-value">128</label>)
+      <br>
+      <input id="scale" type="range" min="64" max="256" step="32" value="128" disabled>
     </div>
     <div>
       <label>Threshold</label>
@@ -37,7 +45,7 @@
   </div>
   <label id="status"></label>
 
-  <script type="module" src="/main.js"></script>
+  <script type="module" src="./main.js"></script>
 </body>
 
 </html>

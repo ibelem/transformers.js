@@ -40,6 +40,9 @@ if (apis.IS_NODE_ENV) {
     if (apis.IS_WEBGPU_AVAILABLE) {
         supportedExecutionProviders.push('webgpu');
     }
+    if(apis.IS_WEBNN_AVAILABLE) {
+        supportedExecutionProviders.push('webnn');
+    }
     supportedExecutionProviders.push('wasm');
     defaultExecutionProviders = ['wasm'];
 }
@@ -93,7 +96,7 @@ if (ONNX_ENV?.wasm) {
     // We use remote wasm files by default to make it easier for newer users.
     // In practice, users should probably self-host the necessary .wasm files.
     // TODO: update this before release
-    ONNX_ENV.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/';
+    ONNX_ENV.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0-esmtest.20240411-1abb64e894/dist/';
 
     // Proxy the WASM backend to prevent the UI from freezing
     // NOTE: This is only needed when running in a non-worker browser environment.
