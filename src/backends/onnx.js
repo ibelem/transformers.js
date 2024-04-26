@@ -74,6 +74,8 @@ export function deviceToExecutionProviders(device) {
  * @returns {Promise<import('onnxruntime-common').InferenceSession>} The ONNX inference session.
  */
 export async function createInferenceSession(buffer, session_options) {
+    console.log('- createInferenceSession (*, session_options) -');
+    console.log(session_options);
     return await InferenceSession.create(buffer, session_options);
 }
 

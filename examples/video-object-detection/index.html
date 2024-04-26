@@ -6,13 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Transformers.js | Real-time object detection</title>
   <link rel="stylesheet" href="./style.css" crossOrigin="anonymous" />
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0-esmtest.20240411-1abb64e894/dist/ort.all.min.js"></script>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0-esmtest.20240411-1abb64e894/dist/ort.all.min.js"></script> -->
 </head>
 
 <body>
   <h1>
-    Real-time object detection w/
-    <a href="http://github.com/xenova/transformers.js" target="_blank">🤗 Transformers.js</a>
+    <span id="provider">WebNN</span> Real-time Object Detection
   </h1>
   <h4>
     Runs locally in your browser, powered by
@@ -44,6 +43,9 @@
     </div>
   </div>
   <label id="status"></label>
+  <div>
+    <a href="./?provider=webgpu">WebGPU</a> * <a href="./?provider=webnn">WebNN</a>
+  </div>
 
   <script type="module" src="./main.js"></script>
 </body>

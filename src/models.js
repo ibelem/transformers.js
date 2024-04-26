@@ -157,6 +157,9 @@ async function getSession(pretrained_model_name_or_path, fileName, options) {
         /** @type {import("./utils/devices.js").DeviceType|null} */(device)
     );
 
+    console.log('- executionProviders -')
+    console.log(executionProviders);
+
     // If options.dtype is specified, we use it to choose the suffix for the model file.
     // Otherwise, we use the default dtype for the device.
     let dtype = options.dtype;
@@ -228,6 +231,7 @@ async function constructSessions(pretrained_model_name_or_path, names, options) 
     const sessions = {};
     for (let i = 0; i < keys.length; ++i) {
         const { buffer, session_options } = sessionData[i];
+        console.log(session_options);
         const session = await createInferenceSession(buffer, session_options);
         sessions[keys[i]] = session;
     }

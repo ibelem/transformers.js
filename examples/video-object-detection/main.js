@@ -12,6 +12,13 @@ env.allowRemoteModels = true;
 
 env.backends.onnx.wasm.proxy = false;
 env.backends.onnx.wasm.simd = true;
+env.backends.onnx.wasm.numThreads = 1;
+// env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0-esmtest.20240411-1abb64e894/dist/';
+
+const getQueryValue = (name) => {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(name);
+};
 
 // Reference the elements that we will need
 const status = document.getElementById("status");
@@ -37,21 +44,42 @@ status.textContent = "Loading model...";
 const model_id = "Xenova/gelan-c_all";
 // const model = await AutoModel.from_pretrained(model_id, { device: 'wasm',
 // dtype: 'q8' });
-const model = await AutoModel.from_pretrained(model_id, {
-  device: "webnn",
-  dtype: "fp16",
-  session_options: {
-    executionProviders: [
-      {
-        name: "webnn",
-        deviceType: "gpu",
-        powerPreference: "default",
-        preferredLayout: "NHWC",
+let model;
+
+try {
+  let provider = document.querySelector('#provider');
+
+  if (getQueryValue("provider") && getQueryValue("provider").toLowerCase() === "webgpu") {
+    provider.innerHTML = 'WebGPU';
+    model = await AutoModel.from_pretrained(model_id, {
+      device: "webgpu",
+      dtype: "fp16",
+    });
+  } else {
+    provider.innerHTML = 'WebNN';
+    model = await AutoModel.from_pretrained(model_id, {
+      device: "webnn",
+      dtype: "fp16",
+      session_options: {
+        executionProviders: [
+          {
+            name: "webnn",
+            deviceType: "gpu",
+            powerPreference: "default",
+            preferredLayout: "NHWC",
+          },
+        ],
+        // freeDimensionOverrides: { unk__576: 1, unk__577: 416, unk__578: 416, unk__579: 1 },
+        freeDimensionOverrides: { batch_size: 1, height: 256, width: 320 },
+        logSeverityLevel: 0,
       },
-    ],
-    // freeDimensionOverrides: { "batch_size": 1, "height": 224, "width": 224 },
-  },
-});
+    });
+  }
+}
+catch(ex) {
+  console.log(ex.message);
+}
+
 const processor = await AutoProcessor.from_pretrained(model_id);
 
 // Set up controls

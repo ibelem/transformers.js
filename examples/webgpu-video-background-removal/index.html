@@ -9,8 +9,7 @@
 
 <body>
   <h1>
-    Real-time background removal w/
-    <a href="http://github.com/xenova/transformers.js" target="_blank">🤗 Transformers.js</a>
+    <span id="provider">WebNN</span> Real-time Background Removal  
   </h1>
   <h4>
     Runs locally in your browser, powered by
@@ -36,6 +35,10 @@
     </div>
   </div>
   <label id="status"></label>
+
+  <div>
+    <a href="./?provider=webgpu">WebGPU</a> * <a href="./?provider=webnn">WebNN</a>
+  </div>
 
   <script type="module" src="/main.js"></script>
 </body>
