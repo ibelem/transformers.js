@@ -284,6 +284,12 @@ function validateInputs(session, inputs) {
     return checkedInputs;
 }
 
+let sessionRunPerformance = 0;
+
+export function getSessionRunPerformance() {
+    return sessionRunPerformance;
+}
+
 /**
  * Executes an InferenceSession using the specified inputs.
  * NOTE: `inputs` must contain at least the input names of the model.
@@ -296,11 +302,17 @@ function validateInputs(session, inputs) {
  * @private
  */
 async function sessionRun(session, inputs) {
+    sessionRunPerformance = 0;
     const checkedInputs = validateInputs(session, inputs);
     try {
         // pass the original ort tensor
         const ortFeed = Object.fromEntries(Object.entries(checkedInputs).map(([k, v]) => [k, v.ort_tensor]));
+        console.log('-- Start Session Run --');
+        let start = performance.now();
         let output = await session.run(ortFeed);
+        sessionRunPerformance = performance.now() - start
+        console.log(`Session run time: ${sessionRunPerformance}ms`);
+        console.log('-- End Session Run --');
         output = replaceTensors(output);
         for (const [name, t] of Object.entries(checkedInputs)) {
             // if we use gpu buffers for kv_caches, we own them and need to dispose()

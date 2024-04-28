@@ -37,19 +37,20 @@ status.textContent = "Loading model...";
 // Load model and processor
 const model_id = "webnn/modnet";
 let model;
+let options = {}
 try {
   let provider = document.querySelector('#provider');
-
   if (getQueryValue("provider") && getQueryValue("provider").toLowerCase() === "webgpu") {
     provider.innerHTML = 'WebGPU';
-    model = await AutoModel.from_pretrained(model_id, {
+    options = {
       device: "webgpu",
       dtype: "fp32",
-    });
+    }
+    
   } else {
     provider.innerHTML = 'WebNN';
-    model = await AutoModel.from_pretrained(model_id, {
-      device: "webnn",
+    options = {
+      // device: "webnn",
       dtype: "fp32",
       session_options: {
         executionProviders: [
@@ -60,12 +61,12 @@ try {
             preferredLayout: "NHWC",
           },
         ],
-        // freeDimensionOverrides: { unk__576: 1, unk__577: 416, unk__578: 416, unk__579: 1 },
         freeDimensionOverrides: { batch_size: 1, height: 256, width: 320 },
         logSeverityLevel: 0,
       },
-    });
+    }
   }
+  model = await AutoModel.from_pretrained(model_id, options);
 } catch (err) {
   status.textContent = err.message;
   alert(err.message);

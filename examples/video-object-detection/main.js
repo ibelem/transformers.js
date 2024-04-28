@@ -45,21 +45,21 @@ const model_id = "Xenova/gelan-c_all";
 // const model = await AutoModel.from_pretrained(model_id, { device: 'wasm',
 // dtype: 'q8' });
 let model;
-
+let options = {}
 try {
   let provider = document.querySelector('#provider');
-
   if (getQueryValue("provider") && getQueryValue("provider").toLowerCase() === "webgpu") {
     provider.innerHTML = 'WebGPU';
-    model = await AutoModel.from_pretrained(model_id, {
+    options = {
       device: "webgpu",
-      dtype: "fp16",
-    });
+      dtype: "fp32",
+    }
+    
   } else {
     provider.innerHTML = 'WebNN';
-    model = await AutoModel.from_pretrained(model_id, {
+    options = {
       device: "webnn",
-      dtype: "fp16",
+      dtype: "fp32",
       session_options: {
         executionProviders: [
           {
@@ -73,11 +73,12 @@ try {
         freeDimensionOverrides: { batch_size: 1, height: 256, width: 320 },
         logSeverityLevel: 0,
       },
-    });
+    }
   }
-}
-catch(ex) {
-  console.log(ex.message);
+
+  model = await AutoModel.from_pretrained(model_id, options);
+} catch (err) {
+  console.log(err.message);
 }
 
 const processor = await AutoProcessor.from_pretrained(model_id);
