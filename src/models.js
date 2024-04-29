@@ -284,10 +284,14 @@ function validateInputs(session, inputs) {
     return checkedInputs;
 }
 
-let sessionRunPerformance = 0;
+let perf = {
+    warmup: 0,
+    inference: [],
+    throughput: 0
+};
 
-export function getSessionRunPerformance() {
-    return sessionRunPerformance;
+export function getPerf() {
+    return perf;
 }
 
 /**
@@ -302,17 +306,35 @@ export function getSessionRunPerformance() {
  * @private
  */
 async function sessionRun(session, inputs) {
-    sessionRunPerformance = 0;
+    perf = {
+        warmup: 0,
+        inference: [],
+        throughput: 0
+    };
     const checkedInputs = validateInputs(session, inputs);
     try {
         // pass the original ort tensor
         const ortFeed = Object.fromEntries(Object.entries(checkedInputs).map(([k, v]) => [k, v.ort_tensor]));
-        console.log('-- Start Session Run --');
+        let output;
+        let numOfWarmups = 1;
+        let numOfRuns = 100;
         let start = performance.now();
-        let output = await session.run(ortFeed);
-        sessionRunPerformance = performance.now() - start
-        console.log(`Session run time: ${sessionRunPerformance}ms`);
-        console.log('-- End Session Run --');
+        let loopStart;
+        let current;
+        let arrayInference = [];
+        for(let i=0; i<numOfWarmups + numOfRuns; i++) {
+            loopStart = performance.now();
+            output = await session.run(ortFeed);
+            current = performance.now() - loopStart;
+            if(i==0) {
+                perf.warmup = current;
+            } else {
+                arrayInference.push(current);
+            }
+            console.log(`Session run time: ${current}ms`);
+        }
+        perf.inference = arrayInference;
+        perf.throughput = parseFloat((1000.00 / ((performance.now() - start) / (numOfWarmups + numOfRuns))).toFixed(2));
         output = replaceTensors(output);
         for (const [name, t] of Object.entries(checkedInputs)) {
             // if we use gpu buffers for kv_caches, we own them and need to dispose()
