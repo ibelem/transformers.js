@@ -41,7 +41,7 @@ function setStreamSize(width, height) {
 status.textContent = "Loading model...";
 
 // Load model and processor
-const model_id = "Xenova/gelan-c_all";
+const model_id = "webnn/ssd-mobilenet-v1";
 // const model = await AutoModel.from_pretrained(model_id, { device: 'wasm',
 // dtype: 'q8' });
 let model;
@@ -52,14 +52,14 @@ try {
     provider.innerHTML = 'WebGPU';
     options = {
       device: "webgpu",
-      dtype: "fp32",
+      dtype: "fp16",
     }
     
   } else {
     provider.innerHTML = 'WebNN';
     options = {
       device: "webnn",
-      dtype: "fp32",
+      dtype: "fp16",
       session_options: {
         executionProviders: [
           {
@@ -69,8 +69,8 @@ try {
             preferredLayout: "NHWC",
           },
         ],
-        // freeDimensionOverrides: { unk__576: 1, unk__577: 416, unk__578: 416, unk__579: 1 },
-        freeDimensionOverrides: { batch_size: 1, height: 256, width: 320 },
+        freeDimensionOverrides: { "unk__6578": 1, "unk__6579": 224, "unk__6580": 224 },
+        // freeDimensionOverrides: { batch_size: 1, height: 256, width: 320 },
         logSeverityLevel: 0,
       },
     }
@@ -185,6 +185,11 @@ function updateCanvas() {
       overlay.innerHTML = "";
 
       const sizes = inputs.reshaped_input_sizes[0].reverse();
+      console.log(outputs);
+      console.log(outputs.tolist());
+
+      // renderBox([0.375, 14.28125, 136.375, 127.75, 0.9404296875, 0], sizes);
+      // renderBox([xmin, ymin, xmax, ymax, score, id], [w, h]) 
       outputs.tolist().forEach((x) => renderBox(x, sizes));
 
       if (previousTime !== undefined) {
