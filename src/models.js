@@ -284,11 +284,18 @@ function validateInputs(session, inputs) {
     return checkedInputs;
 }
 
+const getQueryValue = (name) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+};
+
 let perf = {
     warmup: 0,
     inference: [],
     throughput: 0
 };
+
+let runs = 1;
 
 export function getPerf() {
     return perf;
@@ -317,12 +324,19 @@ async function sessionRun(session, inputs) {
         const ortFeed = Object.fromEntries(Object.entries(checkedInputs).map(([k, v]) => [k, v.ort_tensor]));
         let output;
         let numOfWarmups = 1;
-        let numOfRuns = 100;
+        // let numOfRuns = 100;
+        console.log(`-- number of test runs --`);
+        if (getQueryValue("run")) {
+            runs = parseInt(getQueryValue("run"));
+        } else {
+            runs = 1;
+        }
+        console.log(runs);
         let start = performance.now();
         let loopStart;
         let current;
         let arrayInference = [];
-        for(let i=0; i<numOfWarmups + numOfRuns; i++) {
+        for(let i=0; i<numOfWarmups + runs; i++) {
             loopStart = performance.now();
             output = await session.run(ortFeed);
             current = performance.now() - loopStart;
@@ -334,7 +348,7 @@ async function sessionRun(session, inputs) {
             console.log(`Session run time: ${current}ms`);
         }
         perf.inference = arrayInference;
-        perf.throughput = parseFloat((1000.00 / ((performance.now() - start) / (numOfWarmups + numOfRuns))).toFixed(2));
+        perf.throughput = parseFloat((1000.00 / ((performance.now() - start) / (numOfWarmups + runs))).toFixed(2));
         output = replaceTensors(output);
         for (const [name, t] of Object.entries(checkedInputs)) {
             // if we use gpu buffers for kv_caches, we own them and need to dispose()
