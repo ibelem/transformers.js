@@ -98,7 +98,9 @@ if (ONNX_ENV?.wasm) {
     // We use remote wasm files by default to make it easier for newer users.
     // In practice, users should probably self-host the necessary .wasm files.
     // TODO: update this before release
-    ONNX_ENV.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0-esmtest.20240411-1abb64e894/dist/';
+
+    ONNX_ENV.wasm.numThreads = 4;
+    ONNX_ENV.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0-dev.20240621-69d522f4e9/dist/';
 
     // Proxy the WASM backend to prevent the UI from freezing
     // NOTE: This is only needed when running in a non-worker browser environment.
@@ -106,7 +108,7 @@ if (ONNX_ENV?.wasm) {
 
     // https://developer.mozilla.org/en-US/docs/Web/API/crossOriginIsolated
     if (typeof crossOriginIsolated === 'undefined' || !crossOriginIsolated) {
-        ONNX_ENV.wasm.numThreads = 1;
+        // ONNX_ENV.wasm.numThreads = 1;
     }
 
     // Running in a browser-environment
