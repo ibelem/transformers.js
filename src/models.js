@@ -360,6 +360,23 @@ function validateInputs(session, inputs) {
     return checkedInputs;
 }
 
+const getQueryValue = (name) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+};
+
+let runs = 1;
+
+let perf = {
+    warmup: 0,
+    inference: [],
+    throughput: 0
+};
+
+export function getPerf() {
+    return perf;
+}
+
 /**
  * Executes an InferenceSession using the specified inputs.
  * NOTE: `inputs` must contain at least the input names of the model.
@@ -372,11 +389,42 @@ function validateInputs(session, inputs) {
  * @private
  */
 async function sessionRun(session, inputs) {
+    perf = {
+        warmup: 0,
+        inference: [],
+        throughput: 0
+    };
     const checkedInputs = validateInputs(session, inputs);
     try {
         // pass the original ort tensor
         const ortFeed = Object.fromEntries(Object.entries(checkedInputs).map(([k, v]) => [k, v.ort_tensor]));
-        let output = await session.run(ortFeed);
+        let output;
+        let numOfWarmups = 1;
+        // let numOfRuns = 100;
+        console.log(`-- number of test runs --`);
+        if (getQueryValue("run")) {
+            runs = parseInt(getQueryValue("run"));
+        } else {
+            runs = 1;
+        }
+        console.log(runs);
+        let start = performance.now();
+        let loopStart;
+        let current;
+        let arrayInference = [];
+        for(let i=0; i < numOfWarmups + runs; i++) {
+            loopStart = performance.now();
+            output = await session.run(ortFeed);
+            current = performance.now() - loopStart;
+            if(i==0) {
+                perf.warmup = current;
+            } else {
+                arrayInference.push(current);
+            }
+            console.log(`Session run time: ${current}ms`);
+        }
+        perf.inference = arrayInference;
+        perf.throughput = parseFloat((1000.00 / ((performance.now() - start) / (numOfWarmups + runs))).toFixed(2));
         output = replaceTensors(output);
         return output;
     } catch (e) {
