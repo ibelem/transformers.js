@@ -1,0 +1,274 @@
+From 5b5e5ed31ec6d268a96004705ab2574b956c531f Mon Sep 17 00:00:00 2001
+From: Joshua Lochner <admin@xenova.com>
+Date: Fri, 7 Mar 2025 13:03:36 +0200
+Subject: [PATCH] [version] Update to 3.4.0
+
+* Update types
+
+* hotfix: Allow user to pass whisper language as special token
+
+* Update onnxruntime-web version
+
+* [version] Update to 3.4.0
+---
+ README.md                                     |  4 ++--
+ docs/snippets/2_installation.snippet          |  2 +-
+ docs/snippets/4_custom-usage.snippet          |  2 +-
+ package-lock.json                             | 20 +++++++++----------
+ package.json                                  |  6 +++---
+ src/env.js                                    |  2 +-
+ .../idefics3/image_processing_idefics3.js     |  2 +-
+ src/models/whisper/common_whisper.js          |  8 +++++++-
+ src/utils/audio.js                            |  2 ++
+ src/utils/maths.js                            |  2 +-
+ src/utils/tensor.js                           |  5 +++--
+ 11 files changed, 32 insertions(+), 23 deletions(-)
+
+diff --git a/README.md b/README.md
+index 7639213..6fe4f7d 100644
+--- a/README.md
++++ b/README.md
+@@ -47,7 +47,7 @@ npm i @huggingface/transformers
+ Alternatively, you can use it in vanilla JS, without any bundler, by using a CDN or static hosting. For example, using [ES Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), you can import the library with:
+ ```html
+ <script type="module">
+-    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3';
++    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.0';
+ </script>
+ ```
+ 
+@@ -155,7 +155,7 @@ Check out the Transformers.js [template](https://huggingface.co/new-space?templa
+ 
+ 
+ 
+-By default, Transformers.js uses [hosted pretrained models](https://huggingface.co/models?library=transformers.js) and [precompiled WASM binaries](https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3/dist/), which should work out-of-the-box. You can customize this as follows:
++By default, Transformers.js uses [hosted pretrained models](https://huggingface.co/models?library=transformers.js) and [precompiled WASM binaries](https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.0/dist/), which should work out-of-the-box. You can customize this as follows:
+ 
+ ### Settings
+ 
+diff --git a/docs/snippets/2_installation.snippet b/docs/snippets/2_installation.snippet
+index 7411185..edad4d8 100644
+--- a/docs/snippets/2_installation.snippet
++++ b/docs/snippets/2_installation.snippet
+@@ -7,6 +7,6 @@ npm i @huggingface/transformers
+ Alternatively, you can use it in vanilla JS, without any bundler, by using a CDN or static hosting. For example, using [ES Modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), you can import the library with:
+ ```html
+ <script type="module">
+-    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3';
++    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.0';
+ </script>
+ ```
+diff --git a/docs/snippets/4_custom-usage.snippet b/docs/snippets/4_custom-usage.snippet
+index 567717a..a23e55f 100644
+--- a/docs/snippets/4_custom-usage.snippet
++++ b/docs/snippets/4_custom-usage.snippet
+@@ -1,6 +1,6 @@
+ 
+ 
+-By default, Transformers.js uses [hosted pretrained models](https://huggingface.co/models?library=transformers.js) and [precompiled WASM binaries](https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3/dist/), which should work out-of-the-box. You can customize this as follows:
++By default, Transformers.js uses [hosted pretrained models](https://huggingface.co/models?library=transformers.js) and [precompiled WASM binaries](https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.0/dist/), which should work out-of-the-box. You can customize this as follows:
+ 
+ ### Settings
+ 
+diff --git a/package-lock.json b/package-lock.json
+index 61c93aa..7426efd 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,17 +1,17 @@
+ {
+   "name": "@huggingface/transformers",
+-  "version": "3.3.3",
++  "version": "3.4.0",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "@huggingface/transformers",
+-      "version": "3.3.3",
++      "version": "3.4.0",
+       "license": "Apache-2.0",
+       "dependencies": {
+         "@huggingface/jinja": "^0.3.3",
+         "onnxruntime-node": "1.20.1",
+-        "onnxruntime-web": "1.22.0-dev.20250306-aafa8d170a",
++        "onnxruntime-web": "1.22.0-dev.20250306-ccf8fdd9ea",
+         "sharp": "^0.33.5"
+       },
+       "devDependencies": {
+@@ -23,7 +23,7 @@
+         "jest-environment-node": "^30.0.0-alpha.6",
+         "jsdoc-to-markdown": "^9.1.1",
+         "prettier": "3.4.2",
+-        "typescript": "^5.7.2",
++        "typescript": "^5.8.2",
+         "wavefile": "11.0.0",
+         "webpack": "^5.97.1",
+         "webpack-cli": "^5.1.4",
+@@ -8783,9 +8783,9 @@
+       }
+     },
+     "node_modules/onnxruntime-web": {
+-      "version": "1.22.0-dev.20250306-aafa8d170a",
+-      "resolved": "https://registry.npmjs.org/onnxruntime-web/-/onnxruntime-web-1.22.0-dev.20250306-aafa8d170a.tgz",
+-      "integrity": "sha512-g72WvR1IZFVZQe3fp7K4lk5Ka6zEnMkAVc1jpLK5TIzTc2anOIEYzGTjG2t0cM+BRKN2wxSS20zWtYOL+h5C6Q==",
++      "version": "1.22.0-dev.20250306-ccf8fdd9ea",
++      "resolved": "https://registry.npmjs.org/onnxruntime-web/-/onnxruntime-web-1.22.0-dev.20250306-ccf8fdd9ea.tgz",
++      "integrity": "sha512-YwqS9Qqx2eKFXIx+HQloqRUG5/STHPUuNk8wn+qVVmwXBIfNdXX0/Lm7wgo5CnC2k+yqZmjDV5V1dZi4PeSPGQ==",
+       "license": "MIT",
+       "dependencies": {
+         "flatbuffers": "^25.1.24",
+@@ -10302,9 +10302,9 @@
+       }
+     },
+     "node_modules/typescript": {
+-      "version": "5.7.2",
+-      "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.7.2.tgz",
+-      "integrity": "sha512-i5t66RHxDvVN40HfDd1PsEThGNnlMCMT3jMUuoh9/0TaqWevNontacunWyN02LA9/fIbEWlcHZcgTKb9QoaLfg==",
++      "version": "5.8.2",
++      "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.8.2.tgz",
++      "integrity": "sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ==",
+       "dev": true,
+       "license": "Apache-2.0",
+       "bin": {
+diff --git a/package.json b/package.json
+index de51902..117688f 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "@huggingface/transformers",
+-  "version": "3.3.3",
++  "version": "3.4.0",
+   "description": "State-of-the-art Machine Learning for the web. Run 🤗 Transformers directly in your browser, with no need for a server!",
+   "main": "./src/transformers.js",
+   "types": "./types/transformers.d.ts",
+@@ -57,7 +57,7 @@
+   "dependencies": {
+     "@huggingface/jinja": "^0.3.3",
+     "onnxruntime-node": "1.20.1",
+-    "onnxruntime-web": "1.22.0-dev.20250306-aafa8d170a",
++    "onnxruntime-web": "1.22.0-dev.20250306-ccf8fdd9ea",
+     "sharp": "^0.33.5"
+   },
+   "devDependencies": {
+@@ -69,7 +69,7 @@
+     "jest-environment-node": "^30.0.0-alpha.6",
+     "jsdoc-to-markdown": "^9.1.1",
+     "prettier": "3.4.2",
+-    "typescript": "^5.7.2",
++    "typescript": "^5.8.2",
+     "wavefile": "11.0.0",
+     "webpack": "^5.97.1",
+     "webpack-cli": "^5.1.4",
+diff --git a/src/env.js b/src/env.js
+index f351c47..5f0e8d9 100644
+--- a/src/env.js
++++ b/src/env.js
+@@ -26,7 +26,7 @@ import fs from 'fs';
+ import path from 'path';
+ import url from 'url';
+ 
+-const VERSION = '3.3.3';
++const VERSION = '3.4.0';
+ 
+ // Check if various APIs are available (depends on environment)
+ const IS_BROWSER_ENV = typeof window !== "undefined" && typeof window.document !== "undefined";
+diff --git a/src/models/idefics3/image_processing_idefics3.js b/src/models/idefics3/image_processing_idefics3.js
+index b01d625..3015bff 100644
+--- a/src/models/idefics3/image_processing_idefics3.js
++++ b/src/models/idefics3/image_processing_idefics3.js
+@@ -147,7 +147,7 @@ export class Idefics3ImageProcessor extends ImageProcessor {
+                     const start_offset = i * pixel_attention_mask_stride + num_patches * h * w;
+                     const end_offset = (i + 1) * pixel_attention_mask_stride;
+ 
+-                    // @ts-expect-error
++                    // @ts-ignore
+                     pixel_attention_mask_data.fill(false, start_offset, end_offset);
+                 }
+             }
+diff --git a/src/models/whisper/common_whisper.js b/src/models/whisper/common_whisper.js
+index df4cce4..aa56540 100644
+--- a/src/models/whisper/common_whisper.js
++++ b/src/models/whisper/common_whisper.js
+@@ -135,6 +135,12 @@ export function whisper_language_to_code(language) {
+     if (language_code === undefined) {
+         // User provided something that is not a language name
+ 
++        // Perhaps the user passed the special token itself
++        const language_special_token = language.match(/^<\|([a-z]{2})\|>$/);
++        if (language_special_token) {
++            language = language_special_token[1];
++        }
++
+         if (WHISPER_LANGUAGE_MAPPING.has(language)) {
+             // User provided the language code directly (e.g., "en")
+             language_code = language;
+@@ -144,7 +150,7 @@ export function whisper_language_to_code(language) {
+             const is_language_code = language.length === 2;
+             const langs = is_language_code ? WHISPER_LANGUAGE_MAPPING.keys() : WHISPER_LANGUAGE_MAPPING.values();
+ 
+-            throw new Error(`Language "${language}" is not supported. Must be one of: ${JSON.stringify(langs)}`);
++            throw new Error(`Language "${language}" is not supported. Must be one of: ${JSON.stringify(Array.from(langs))}`);
+         }
+     }
+     return language_code;
+diff --git a/src/utils/audio.js b/src/utils/audio.js
+index 54dc870..06f5278 100644
+--- a/src/utils/audio.js
++++ b/src/utils/audio.js
+@@ -150,6 +150,7 @@ function hertz_to_mel(freq, mel_scale = "htk") {
+         throw new Error('mel_scale should be one of "htk", "slaney" or "kaldi".');
+     }
+ 
++    // @ts-expect-error ts(2322)
+     return typeof freq === 'number' ? fn(freq) : freq.map(x => fn(x));
+ }
+ 
+@@ -173,6 +174,7 @@ function mel_to_hertz(mels, mel_scale = "htk") {
+         throw new Error('mel_scale should be one of "htk", "slaney" or "kaldi".');
+     }
+ 
++    // @ts-expect-error ts(2322)
+     return typeof mels === 'number' ? fn(mels) : mels.map(x => fn(x));
+ }
+ 
+diff --git a/src/utils/maths.js b/src/utils/maths.js
+index 107068d..4bbe709 100644
+--- a/src/utils/maths.js
++++ b/src/utils/maths.js
+@@ -9,7 +9,7 @@
+  */
+ 
+ /**
+- * @typedef {Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array} TypedArray
++ * @typedef {Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float16Array | Float32Array | Float64Array} TypedArray
+  * @typedef {BigInt64Array | BigUint64Array} BigTypedArray
+  * @typedef {TypedArray | BigTypedArray} AnyTypedArray
+  */
+diff --git a/src/utils/tensor.js b/src/utils/tensor.js
+index caecac8..07b74ac 100644
+--- a/src/utils/tensor.js
++++ b/src/utils/tensor.js
+@@ -22,7 +22,7 @@ import { TensorOpRegistry } from '../ops/registry.js';
+ 
+ export const DataTypeMap = Object.freeze({
+     float32: Float32Array,
+-    // @ts-expect-error ts(2552) Limited availability of Float16Array across browsers:
++    // @ts-ignore ts(2552) Limited availability of Float16Array across browsers:
+     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float16Array
+     float16: typeof Float16Array !== "undefined" ? Float16Array: Uint16Array,
+     float64: Float64Array,
+@@ -91,8 +91,9 @@ export class Tensor {
+             // Create new tensor
+             this.ort_tensor = new ONNXTensor(
+                 /** @type {DataType} */(args[0]),
++                // @ts-expect-error ts(2769) Type 'number' is not assignable to type 'bigint'.
+                 /** @type {Exclude<import('./maths.js').AnyTypedArray, Uint8ClampedArray>} */(args[1]),
+-                args[2]
++                args[2],
+             );
+         }
+ 
+-- 
+2.25.1
+
