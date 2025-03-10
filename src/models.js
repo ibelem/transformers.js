@@ -403,6 +403,9 @@ async function sessionRun(session, inputs) {
     try {
         // pass the original ort tensor
         const ortFeed = Object.fromEntries(Object.entries(checkedInputs).map(([k, v]) => [k, v.ort_tensor]));
+        console.log('+++++++++ run start feed +++++++++');
+        console.log(ortFeed);
+        console.log('+++++++++ run end feed +++++++++');
         let output = await session.run(ortFeed);
         output = replaceTensors(output);
         return output;

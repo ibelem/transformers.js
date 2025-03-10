@@ -153,6 +153,11 @@ export async function createInferenceSession(buffer, session_options, session_co
         await wasmInitPromise;
     }
 
+    console.log('+++++++++ create start +++++++++');
+    console.log(session_options);
+    console.log(session_config);
+    console.log('+++++++++ create end +++++++++');
+
     const sessionPromise = InferenceSession.create(buffer, session_options);
     wasmInitPromise ??= sessionPromise;
     const session = await sessionPromise;
@@ -179,7 +184,7 @@ if (ONNX_ENV?.wasm) {
     // https://onnxruntime.ai/docs/api/js/interfaces/Env.WebAssemblyFlags.html#wasmPaths
     // We use remote wasm files by default to make it easier for newer users.
     // In practice, users should probably self-host the necessary .wasm files.
-    ONNX_ENV.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${env.version}/dist/`;
+    // ONNX_ENV.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${env.version}/dist/`;
 
     // TODO: Add support for loading WASM files from cached buffer when we upgrade to onnxruntime-web@1.19.0
     // https://github.com/microsoft/onnxruntime/pull/21534
