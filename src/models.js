@@ -249,6 +249,7 @@ async function getSession(pretrained_model_name_or_path, fileName, options) {
     // Overwrite `executionProviders` if not specified
     session_options.executionProviders ??= executionProviders;
 
+    // Overwrite `freeDimensionOverrides` if specified in config and not set in session options
     const free_dimension_overrides = custom_config.free_dimension_overrides;
     if (free_dimension_overrides) {
         session_options.freeDimensionOverrides ??= free_dimension_overrides;
