@@ -415,11 +415,5 @@ export class AutoConfig {
 
 /**
  * Device-specific configuration options.
- * @typedef {Object} DeviceConfig
- * @property {import('./utils/tensor.js').DataType|Record<import('./utils/dtypes.js').DataType, import('./utils/tensor.js').DataType>} [kv_cache_dtype] The data type of the key-value cache.
- * @property {Record<string, number>} [free_dimension_overrides] Override the free dimensions of the model.
- * See https://onnxruntime.ai/docs/tutorials/web/env-flags-and-session-options.html#freedimensionoverrides
- * for more information.
- * @property {import('./utils/dtypes.js').DataType|Record<string, import('./utils/dtypes.js').DataType>} [dtype] The default data type to use for the model.
- * @property {import('./utils/hub.js').ExternalData|Record<string, import('./utils/hub.js').ExternalData>} [use_external_data_format=false] Whether to load the model using the external data format (used for models >= 2GB in size).
+ * @typedef {Omit<TransformersJSConfig, "device" | "device_config">} DeviceConfig
  */
