@@ -199,7 +199,7 @@ async function getSession(pretrained_model_name_or_path, fileName, options) {
     }
 
     if (dtype === DATA_TYPES.auto) {
-        // Try to choose the auto dtype based on the device-specific config first, then fall back to transformers.js_config
+        // Try to choose the auto dtype based on the custom config
         let config_dtype = custom_config.dtype;
         if (typeof config_dtype !== 'string') {
             config_dtype = config_dtype?.[fileName];
@@ -250,7 +250,6 @@ async function getSession(pretrained_model_name_or_path, fileName, options) {
     session_options.executionProviders ??= executionProviders;
 
     const free_dimension_overrides = custom_config.free_dimension_overrides;
-
     if (free_dimension_overrides) {
         session_options.freeDimensionOverrides ??= free_dimension_overrides;
     } else if (selectedDevice.startsWith('webnn') && !session_options.freeDimensionOverrides) {
@@ -264,7 +263,6 @@ async function getSession(pretrained_model_name_or_path, fileName, options) {
 
     // Handle onnx external data files
     const use_external_data_format = options.use_external_data_format ?? custom_config.use_external_data_format;
-
     /** @type {Promise<string|{path: string, data: Uint8Array}>[]} */
     let externalDataPromises = [];
     if (use_external_data_format) {
