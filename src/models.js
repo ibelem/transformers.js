@@ -158,8 +158,7 @@ const MODEL_CLASS_TO_NAME_MAPPING = new Map();
  * @private
  */
 async function getSession(pretrained_model_name_or_path, fileName, options) {
-    const custom_config = options.config?.['transformers.js_config'] ?? {};
-    const device_config = custom_config.device_config ?? {};
+    let custom_config = options.config?.['transformers.js_config'] ?? {};
 
     let device = options.device ?? custom_config.device;
     if (device && typeof device !== 'string') {
@@ -176,14 +175,20 @@ async function getSession(pretrained_model_name_or_path, fileName, options) {
         device ?? (apis.IS_NODE_ENV ? 'cpu' : 'wasm')
     );
 
-    // Get device-specific config if available
-    const deviceSpecificConfig = device_config[selectedDevice] ?? {};
-
     const executionProviders = deviceToExecutionProviders(selectedDevice);
 
+    // Update custom config with the selected device's config, if it exists
+    const device_config = custom_config.device_config ?? {};
+    if (device_config.hasOwnProperty(selectedDevice)) {
+        custom_config = {
+            ...custom_config,
+            ...device_config[selectedDevice],
+        };
+    }
+
     // If options.dtype is specified, we use it to choose the suffix for the model file.
-    // Otherwise, try device-specific config, then fall back to transformers.js_config
-    let dtype = options.dtype ?? deviceSpecificConfig.dtype ?? custom_config.dtype;
+    // Otherwise, we use the default dtype for the device.
+    let dtype = options.dtype ?? custom_config.dtype;
     if (typeof dtype !== 'string') {
         if (dtype && dtype.hasOwnProperty(fileName)) {
             dtype = dtype[fileName];
@@ -195,7 +200,7 @@ async function getSession(pretrained_model_name_or_path, fileName, options) {
 
     if (dtype === DATA_TYPES.auto) {
         // Try to choose the auto dtype based on the device-specific config first, then fall back to transformers.js_config
-        let config_dtype = deviceSpecificConfig.dtype ?? custom_config.dtype;
+        let config_dtype = custom_config.dtype;
         if (typeof config_dtype !== 'string') {
             config_dtype = config_dtype?.[fileName];
         }
@@ -217,10 +222,8 @@ async function getSession(pretrained_model_name_or_path, fileName, options) {
         throw new Error(`The device (${selectedDevice}) does not support fp16.`);
     }
 
-    // Check device-specific kv_cache_dtype first, then fall back to transformers.js_config
-    const kv_cache_dtype_config = deviceSpecificConfig.kv_cache_dtype ?? custom_config.kv_cache_dtype;
-
     // Only valid for models with a decoder
+    const kv_cache_dtype_config = custom_config.kv_cache_dtype;
     const kv_cache_dtype = kv_cache_dtype_config
         ? (typeof kv_cache_dtype_config === 'string'
             ? kv_cache_dtype_config
@@ -246,24 +249,21 @@ async function getSession(pretrained_model_name_or_path, fileName, options) {
     // Overwrite `executionProviders` if not specified
     session_options.executionProviders ??= executionProviders;
 
-    // First check device-specific free_dimension_overrides, then fall back to transformers.js_config
-    const free_dimension_overrides = deviceSpecificConfig.free_dimension_overrides ?? custom_config.free_dimension_overrides;
+    const free_dimension_overrides = custom_config.free_dimension_overrides;
 
     if (free_dimension_overrides) {
         session_options.freeDimensionOverrides ??= free_dimension_overrides;
     } else if (selectedDevice.startsWith('webnn') && !session_options.freeDimensionOverrides) {
         console.warn(
-            'WebNN does not currently support dynamic shapes and requires `free_dimension_overrides` to be set in config.json as a field within "device_config[selectedDevice]" or "transformers.js_config"' +
-            'When `free_dimension_overrides` is not set, you may experience significant performance degradation.'
+            `WebNN does not currently support dynamic shapes and requires 'free_dimension_overrides' to be set in config.json, preferably as a field within config["transformers.js_config"]["device_config"]["${selectedDevice}"]. ` +
+            `When 'free_dimension_overrides' is not set, you may experience significant performance degradation.`
         );
     }
 
     const bufferOrPathPromise = getModelFile(pretrained_model_name_or_path, modelFileName, true, options, apis.IS_NODE_ENV);
 
-    // handle onnx external data files - check device-specific config first, then fall back to transformers.js_config
-    const use_external_data_format = options.use_external_data_format ??
-        deviceSpecificConfig.use_external_data_format ??
-        custom_config.use_external_data_format;
+    // Handle onnx external data files
+    const use_external_data_format = options.use_external_data_format ?? custom_config.use_external_data_format;
 
     /** @type {Promise<string|{path: string, data: Uint8Array}>[]} */
     let externalDataPromises = [];
