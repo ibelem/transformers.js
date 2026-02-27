@@ -1,5 +1,6 @@
 import { createInferenceSession, runInferenceSession, isONNXProxy } from '../backends/onnx.js';
 import { Tensor } from '../utils/tensor.js';
+import { apis } from '../env.js';
 
 /**
  * Asynchronously creates a wrapper function for running an ONNX inference session.
@@ -33,10 +34,27 @@ const wrap = async (session_bytes, session_options, names) => {
 
 // In-memory registry of initialized ONNX operators
 export class TensorOpRegistry {
-    static session_options = {
-        // TODO: Allow for multiple execution providers
-        // executionProviders: ['webgpu'],
-    };
+    static session_options = {};
+
+    /**
+     * Configure session options to use WebGPU execution provider when available.
+     * Call this when the main model is using WebGPU to ensure auxiliary ops
+     * (top_k, slice, etc.) also run on the GPU instead of falling back to WASM.
+     */
+    static useWebGPU() {
+        if (apis.IS_WEBGPU_AVAILABLE) {
+            this.session_options = { executionProviders: ['webgpu'] };
+            // Invalidate any cached sessions so they get recreated with the new EP
+            this._top_k = undefined;
+            this._slice = undefined;
+            this._nearest_interpolate_4d = undefined;
+            this._bilinear_interpolate_4d = undefined;
+            this._bicubic_interpolate_4d = undefined;
+            this._matmul = undefined;
+            this._stft = undefined;
+            this._rfft = undefined;
+        }
+    }
 
     static get nearest_interpolate_4d() {
         if (!this._nearest_interpolate_4d) {

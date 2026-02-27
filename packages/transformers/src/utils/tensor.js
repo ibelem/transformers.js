@@ -115,6 +115,20 @@ export class Tensor {
     }
 
     /**
+     * Asynchronously retrieves tensor data, downloading from GPU if necessary.
+     * For GPU-buffer tensors, this downloads the data from GPU to CPU.
+     * For CPU tensors, this returns a resolved promise with the existing data.
+     * @param {boolean} [releaseData=false] If true, releases the GPU buffer after downloading.
+     * @returns {Promise<DataArray>} The tensor data as a typed array.
+     */
+    async getData(releaseData = false) {
+        if (this.location === 'gpu-buffer') {
+            return await this.ort_tensor.getData(releaseData);
+        }
+        return this.data;
+    }
+
+    /**
      * Returns an iterator object for iterating over the tensor data in row-major order.
      * If the tensor has more than one dimension, the iterator will yield subarrays.
      * @returns {Iterator<any>} An iterator object for iterating over the tensor data in row-major order.

@@ -5,7 +5,7 @@
 import { Callable } from '../utils/generic.js';
 import { Tensor, topk } from '../utils/tensor.js';
 
-import { max, softmax } from '../utils/maths.js';
+import { max, max_fp16, softmax } from '../utils/maths.js';
 import { _weightedIndex } from '../utils/random.js';
 import { GenerationConfig } from '../generation/configuration_utils.js';
 
@@ -113,7 +113,14 @@ class GreedySampler extends LogitsSampler {
      */
     async sample(logits) {
         // NOTE: no need to do log_softmax here since we only take the maximum
-        const argmax = max(logits.data)[1];
+        // For fp16 logits stored as Uint16Array, use the optimized fp16 argmax
+        // which avoids allocating a full Float32Array conversion.
+        let argmax;
+        if (logits.type === 'float16' && logits.data instanceof Uint16Array) {
+            argmax = max_fp16(logits.data)[1];
+        } else {
+            argmax = max(logits.data)[1];
+        }
 
         // Note: score is meaningless in this context, since we are performing
         // greedy search (p = 1 => log(p) = 0)
@@ -131,9 +138,23 @@ class MultinomialSampler extends LogitsSampler {
      * @returns {Promise<[bigint, number][]>}
      */
     async sample(logits) {
-        let k = logits.dims.at(-1); // defaults to vocab size
+        const vocabSize = logits.dims.at(-1);
+        let k = vocabSize;
         if (this.generation_config.top_k > 0) {
             k = Math.min(this.generation_config.top_k, k);
+        }
+
+        if (k >= vocabSize) {
+            // No top_k filtering: skip the expensive topk sort (O(n log n) on 152K elements)
+            // and sample directly from the full logits via softmax + weighted random selection.
+            const probabilities = softmax(/** @type {Float32Array} */ (logits.data));
+            return Array.from({ length: this.generation_config.num_beams }, () => {
+                const sampledIndex = this.randomSelect(probabilities);
+                return [
+                    BigInt(sampledIndex), // token id = index directly
+                    Math.log(probabilities[sampledIndex]), // score
+                ];
+            });
         }
 
         // Get top k tokens

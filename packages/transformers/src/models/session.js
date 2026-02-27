@@ -158,6 +158,9 @@ async function getSession(pretrained_model_name_or_path, fileName, options, is_d
             for (const key in shapes) {
                 preferredOutputLocation[key] = 'gpu-buffer';
             }
+            // Keep logits on GPU to avoid downloading the full [batch, seq_len, vocab_size] tensor.
+            // Only the last position's logits are needed, so we download a much smaller slice in the generation loop.
+            preferredOutputLocation['logits'] = 'gpu-buffer';
             session_options.preferredOutputLocation = preferredOutputLocation;
         }
     }

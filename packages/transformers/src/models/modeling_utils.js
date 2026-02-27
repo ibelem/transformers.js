@@ -3,6 +3,7 @@ import { constructSessions, sessionRun } from './session.js';
 import { AutoConfig, getCacheShapes } from '../configs.js';
 import { Tensor, full_like, cat, zeros_like, ones_like, ones } from '../utils/tensor.js';
 import { DataTypeMap } from '../utils/dtypes.js';
+import { TensorOpRegistry } from '../ops/registry.js';
 
 // These will be populated by registry.js
 export let MODEL_MAPPING_NAMES = null;
@@ -828,10 +829,37 @@ export class PreTrainedModel extends Callable {
 
         if (!is_encoder_decoder) {
             // update attention mask
-            model_inputs.attention_mask = cat(
-                [model_inputs.attention_mask, ones([model_inputs.attention_mask.dims[0], 1])],
-                1,
-            );
+            const attn = model_inputs.attention_mask;
+            if (model_inputs._attn_mask_buffer) {
+                // Fast path: use pre-allocated buffer, just extend the view by 1
+                const buf = model_inputs._attn_mask_buffer;
+                const bz = attn.dims[0];
+                const oldLen = attn.dims[1];
+                const newLen = oldLen + 1;
+                // For each batch row, set the new position to 1n in the pre-allocated buffer
+                for (let i = 0; i < bz; ++i) {
+                    buf[i * model_inputs._attn_mask_max_len + oldLen] = 1n;
+                }
+                // Create a new view into the same buffer (no copy, just adjusts dims)
+                // We must create a contiguous slice since the buffer may have padding
+                if (bz === 1) {
+                    // Single batch: subarray is contiguous
+                    model_inputs.attention_mask = new Tensor('int64', buf.subarray(0, newLen), [1, newLen]);
+                } else {
+                    // Multi-batch: need to pack rows (they may have gaps from max_len padding)
+                    const packed = new BigInt64Array(bz * newLen);
+                    for (let i = 0; i < bz; ++i) {
+                        packed.set(buf.subarray(i * model_inputs._attn_mask_max_len, i * model_inputs._attn_mask_max_len + newLen), i * newLen);
+                    }
+                    model_inputs.attention_mask = new Tensor('int64', packed, [bz, newLen]);
+                }
+            } else {
+                // Fallback: concatenate (allocates new buffer each time)
+                model_inputs.attention_mask = cat(
+                    [attn, ones([attn.dims[0], 1])],
+                    1,
+                );
+            }
         } else if ('decoder_attention_mask' in model_inputs) {
             // TODO: update decoder attention mask if the model requires it
         }
@@ -1090,12 +1118,53 @@ export class PreTrainedModel extends Callable {
 
         const sampler = LogitsSampler.getSampler(generation_config);
 
+        // Determine if we can use the fast greedy fp16 path:
+        // Skip the full fp32 conversion when doing greedy decoding with no active logits processors.
+        // The GreedySampler already handles fp16 data natively via max_fp16.
+        const isGreedy = !generation_config.do_sample && !(generation_config.num_beams > 1);
+        const hasActiveProcessors = prepared_logits_processor.processors.length > 0;
+        const useGreedyFp16FastPath = isGreedy && !hasActiveProcessors;
+
+        // Configure TensorOpRegistry to use WebGPU EP when the model uses it.
+        // This makes auxiliary ops (top_k, slice, etc.) run on GPU instead of WASM.
+        const modelSession = this.sessions['model'] ?? this.sessions['decoder_model_merged'];
+        if (modelSession?.config?.device === 'webgpu') {
+            TensorOpRegistry.useWebGPU();
+        }
+
         // TODO make > numInputs
         const scores = new Array(numInputs).fill(0);
         /** @type {bigint[][]} */
         const all_input_ids = input_ids.tolist();
         if (streamer) {
             streamer.put(all_input_ids);
+        }
+
+        // Pre-allocate attention mask buffer to max_length to avoid
+        // re-allocating and copying on every token generation step.
+        if (!is_encoder_decoder && generation_config.max_length && model_inputs.attention_mask) {
+            const bz = model_inputs.attention_mask.dims[0];
+            const currentLen = model_inputs.attention_mask.dims[1];
+            const maxLen = generation_config.max_length;
+            if (maxLen > currentLen) {
+                const buffer = new BigInt64Array(bz * maxLen);
+                // Copy existing attention mask data into the pre-allocated buffer
+                const existingData = /** @type {BigInt64Array} */ (model_inputs.attention_mask.data);
+                for (let i = 0; i < bz; ++i) {
+                    buffer.set(existingData.subarray(i * currentLen, (i + 1) * currentLen), i * maxLen);
+                }
+                // Store the buffer and max length on model_inputs for _update_model_kwargs_for_generation
+                // @ts-ignore - these are internal optimization properties, not Tensor values
+                model_inputs._attn_mask_buffer = buffer;
+                // @ts-ignore
+                model_inputs._attn_mask_max_len = maxLen;
+                // Create initial tensor view (single batch: contiguous subarray; multi-batch: packed)
+                if (bz === 1) {
+                    model_inputs.attention_mask = new Tensor('int64', buffer.subarray(0, currentLen), [1, currentLen]);
+                } else {
+                    // Keep the original for the first iteration since it's already packed
+                }
+            }
         }
         // const all_generated_input_ids = Array.from({ length: numInputs }, () => []);
 
@@ -1136,10 +1205,25 @@ export class PreTrainedModel extends Callable {
             // In most cases, this will be [batch_size, 1, vocab_size]
             // So, we select the last token's logits:
             // (equivalent to `logits = outputs.logits[:, -1, :]`)
-            // The `.to('float32')` is necessary for models with float16 logits,
-            // and is a no-op for float32 logits.
-            // TODO: Support float16 sampling in the sampler directly
-            const logits = outputs.logits.slice(null, -1, null).to('float32');
+            let logits;
+            if (outputs.logits.location === 'gpu-buffer') {
+                // Optimization: logits are on GPU. Download only the data we need.
+                // For seq_len=1 (decode step), we download the full tensor (small: [batch, 1, vocab]).
+                // For seq_len>1 (prefill), we still download the full tensor but then slice on CPU.
+                // In both cases, we release the GPU buffer immediately after download to free VRAM.
+                const logitsData = await outputs.logits.getData(/* releaseData= */ true);
+                const cpuLogits = new Tensor(outputs.logits.type, logitsData, outputs.logits.dims);
+                // For greedy fp16 fast path, skip the fp32 conversion entirely.
+                // The GreedySampler handles fp16 data directly using max_fp16.
+                logits = useGreedyFp16FastPath
+                    ? cpuLogits.slice(null, -1, null)
+                    : cpuLogits.slice(null, -1, null).to('float32');
+            } else {
+                // CPU path: for greedy fp16 fast path, skip the fp32 conversion.
+                logits = useGreedyFp16FastPath
+                    ? outputs.logits.slice(null, -1, null)
+                    : outputs.logits.slice(null, -1, null).to('float32');
+            }
 
             const next_tokens_scores = prepared_logits_processor(all_input_ids, logits);
 
@@ -1601,10 +1685,32 @@ export function cumsum_masked_fill(attention_mask, start_index = 0) {
 export function create_position_ids(model_inputs, past_key_values = null, start_index = 0) {
     const { input_ids, inputs_embeds, attention_mask } = model_inputs;
 
+    // Fast path: for the common decode step (single new token with past_key_values),
+    // the position_id is simply the length of the attention mask minus 1 (or the cumulative count).
+    // This avoids iterating over the full attention mask with BigInt operations.
+    const input_len = (input_ids ?? inputs_embeds).dims.at(1);
+    if (past_key_values && input_len === 1 && attention_mask) {
+        const [bz, seq_len] = attention_mask.dims;
+        const attn_data = attention_mask.data;
+        const posData = new BigInt64Array(bz);
+        for (let i = 0; i < bz; ++i) {
+            // Count the number of 1s in this row (= the next position index)
+            let count = BigInt(start_index);
+            const rowStart = i * seq_len;
+            for (let j = 0; j < seq_len; ++j) {
+                if (attn_data[rowStart + j] !== 0n) {
+                    count += attn_data[rowStart + j];
+                }
+            }
+            posData[i] = count - 1n;
+        }
+        return new Tensor('int64', posData, [bz, 1]);
+    }
+
     const { data, dims } = cumsum_masked_fill(attention_mask, start_index);
     let position_ids = new Tensor('int64', data, dims);
     if (past_key_values) {
-        const offset = -(input_ids ?? inputs_embeds).dims.at(1);
+        const offset = -input_len;
         position_ids = position_ids.slice(null, [offset, null]);
     }
     return position_ids;
