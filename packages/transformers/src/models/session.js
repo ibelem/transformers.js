@@ -181,10 +181,53 @@ function replaceTensors(obj) {
 }
 
 /**
+ * Safely read a query parameter from the URL (browser only).
+ * Returns `null` in non-browser environments.
+ * @param {string} name The query parameter name.
+ * @returns {string|null}
+ */
+const getQueryValue = (name) => {
+    try {
+        if (typeof globalThis.location !== 'undefined') {
+            const urlParams = new URLSearchParams(globalThis.location.search);
+            return urlParams.get(name);
+        }
+    } catch {
+        // Ignore – not in a browser context
+    }
+    return null;
+};
+
+/**
+ * @typedef {Object} PerfMetrics
+ * @property {number} warmup  Time (ms) for the warmup run.
+ * @property {number[]} inference  Times (ms) for each measured inference run.
+ * @property {number} throughput  Inferences per second (including warmup).
+ */
+
+/** @type {PerfMetrics} */
+let perf = {
+    warmup: 0,
+    inference: [],
+    throughput: 0,
+};
+
+/**
+ * Return the latest inference performance metrics.
+ * @returns {PerfMetrics}
+ */
+export function getPerf() {
+    return perf;
+}
+
+/**
  * Executes an InferenceSession using the specified inputs.
  * NOTE: `inputs` must contain at least the input names of the model.
  *  - If additional inputs are passed, they will be ignored.
  *  - If inputs are missing, an error will be thrown.
+ *
+ * When the `run` query parameter is set (browser), the session is executed
+ * 1 warmup + N measured runs and timing metrics are recorded in `perf`.
  *
  * @param {Object} session The InferenceSession object to run.
  * @param {Object} inputs An object that maps input names to input tensors.
@@ -192,6 +235,7 @@ function replaceTensors(obj) {
  * @private
  */
 export async function sessionRun(session, inputs) {
+    perf = { warmup: 0, inference: [], throughput: 0 };
     const checkedInputs = validateInputs(session, inputs);
     try {
         // pass the original ort tensor
@@ -209,7 +253,31 @@ export async function sessionRun(session, inputs) {
             }),
         );
 
-        const output = await runInferenceSession(session, ortFeed);
+        let output;
+        const numWarmups = 1;
+        const runParam = getQueryValue('run');
+        const runs = runParam ? (parseInt(runParam, 10) || 1) : 1;
+
+        logger.debug(`Benchmarking: ${numWarmups} warmup(s), ${runs} run(s)`);
+
+        const start = performance.now();
+        const arrayInference = [];
+
+        for (let i = 0; i < numWarmups + runs; i++) {
+            const loopStart = performance.now();
+            output = await runInferenceSession(session, ortFeed);
+            const current = performance.now() - loopStart;
+            if (i === 0) {
+                perf.warmup = current;
+            } else {
+                arrayInference.push(current);
+            }
+            logger.debug(`Session run ${i + 1}: ${current.toFixed(2)}ms`);
+        }
+
+        perf.inference = arrayInference;
+        perf.throughput = parseFloat((1000.0 / ((performance.now() - start) / (numWarmups + runs))).toFixed(2));
+
         return replaceTensors(output);
     } catch (e) {
         // Error messages can be long (nested) and uninformative. For this reason,

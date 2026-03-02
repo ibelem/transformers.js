@@ -53,6 +53,9 @@ export * from './utils/tensor.js';
 export { softmax, log_softmax, dot, cos_sim } from './utils/maths.js';
 export { random } from './utils/random.js';
 
+// Backend utilities
+export { getPerf } from './models/session.js';
+
 // Cache and file management
 export { ModelRegistry } from './utils/model_registry/ModelRegistry.js';
 
